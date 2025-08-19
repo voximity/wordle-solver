@@ -1,5 +1,4 @@
 use rand::Rng;
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use roaring::RoaringBitmap;
 use std::array;
 use std::io::Write;
@@ -14,7 +13,6 @@ enum Letter {
 struct Wordle<'a, const N: usize> {
     words: Vec<&'a [u8]>,
     pos: [[RoaringBitmap; 26]; N],
-    has: [RoaringBitmap; 26],
     at_least: [[RoaringBitmap; 26]; N],
 }
 
@@ -39,17 +37,6 @@ impl<'a, const N: usize> Wordle<'a, N> {
             })
         });
 
-        // precompute has bitset
-        let has: [RoaringBitmap; 26] = array::from_fn(|letter| {
-            let mut bitmap = RoaringBitmap::new();
-            for (i, word) in words.iter().enumerate() {
-                if word.contains(&(letter as u8 + b'a')) {
-                    bitmap.insert(i as u32);
-                }
-            }
-            bitmap
-        });
-
         // precompute atleast bitset
         let at_least: [[RoaringBitmap; 26]; N] = array::from_fn(|freq| {
             array::from_fn(|letter| {
@@ -67,7 +54,6 @@ impl<'a, const N: usize> Wordle<'a, N> {
         Self {
             words,
             pos,
-            has,
             at_least,
         }
     }
@@ -135,7 +121,9 @@ fn guess<'a, const N: usize>(wordle: &'a Wordle<N>, goal: &[u8]) -> Option<Vec<&
             1 => {
                 let my_guess = wordle.words[c.select(0).unwrap() as usize];
                 if my_guess == goal {
-                    guesses.push(my_guess);
+                    if !guesses.last().is_some_and(|&g| g == goal) {
+                        guesses.push(my_guess);
+                    }
                     return Some(guesses);
                 } else {
                     return None;
@@ -154,12 +142,12 @@ fn guess<'a, const N: usize>(wordle: &'a Wordle<N>, goal: &[u8]) -> Option<Vec<&
 }
 
 const WORD_LENGTH: usize = 5;
-const MAX_GUESSES: usize = 6;
+// const MAX_GUESSES: usize = 6;
 
 fn main() {
     let words_raw = std::fs::read("words").unwrap();
     let wordle: Wordle<WORD_LENGTH> = Wordle::new(&words_raw);
-    let iterations = 1000;
+    // let iterations = 1000;
 
     let mut l = String::new();
     loop {
@@ -169,16 +157,27 @@ fn main() {
         std::io::stdout().flush().unwrap();
         std::io::stdin().read_line(&mut l).unwrap();
 
-        let avg = (0..iterations)
-            .into_par_iter()
-            .map(|_| {
-                guess(&wordle, &l.as_bytes()[0..WORD_LENGTH])
-                    .map(|v| v.len().min(MAX_GUESSES))
-                    .unwrap_or(MAX_GUESSES)
-            })
-            .sum::<usize>() as f32
-            / iterations as f32;
+        let guesses = guess(&wordle, &l.as_bytes()[0..WORD_LENGTH]);
+        match guesses {
+            Some(guesses) => {
+                println!("took {} guesses:", guesses.len());
+                guesses
+                    .iter()
+                    .for_each(|guess| println!("- {}", str::from_utf8(&guess).unwrap()));
+            }
+            None => println!("unable to arrive at solution"),
+        }
 
-        println!("over {iterations} iterations, average {avg} guesses");
+        // let avg = (0..iterations)
+        //     .into_par_iter()
+        //     .map(|_| {
+        //         guess(&wordle, &l.as_bytes()[0..WORD_LENGTH])
+        //             .map(|v| v.len().min(MAX_GUESSES))
+        //             .unwrap_or(MAX_GUESSES)
+        //     })
+        //     .sum::<usize>() as f32
+        //     / iterations as f32;
+        //
+        // println!("over {iterations} iterations, average {avg} guesses");
     }
 }
