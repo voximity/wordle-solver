@@ -141,7 +141,7 @@ impl<'a, const N: usize> Wordle<'a, N> {
 pub fn guess<'a, const N: usize>(
     wordle: &'a Wordle<N>,
     goal: &[u8],
-) -> Option<Vec<(&'a [u8], Feedback<N>)>> {
+) -> Option<Vec<(&'a [u8], Feedback<N>, u64)>> {
     let mut c = wordle.new_bitmap();
     let mut guesses = vec![];
     loop {
@@ -152,8 +152,8 @@ pub fn guess<'a, const N: usize>(
                 if my_guess == goal {
                     // add final guess if we didn't "guess" it before
                     // TODO: why does this sometimes happen?
-                    if !guesses.last().is_some_and(|(g, _)| *g == goal) {
-                        guesses.push((my_guess, Feedback::correct()));
+                    if !guesses.last().is_some_and(|(g, _, _)| *g == goal) {
+                        guesses.push((my_guess, Feedback::correct(), len));
                     }
 
                     return Some(guesses);
@@ -169,7 +169,7 @@ pub fn guess<'a, const N: usize>(
         let word = wordle.words[c.select(idx).unwrap() as usize];
         let feedback = Wordle::guess(word, goal);
         wordle.apply_guess(&mut c, word, &feedback);
-        guesses.push((word, feedback));
+        guesses.push((word, feedback, len));
     }
 }
 

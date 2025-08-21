@@ -40,10 +40,10 @@ fn main() {
             manifest.days_since_launch
         );
 
-        guesses.iter().for_each(|(guess, feedback)| {
+        guesses.iter().for_each(|(guess, feedback, pool)| {
             write!(
                 &mut content,
-                "{feedback} ||`{}`||\n",
+                "{feedback} ||`{}` (1 in {pool})||\n",
                 std::str::from_utf8(guess).unwrap()
             )
             .unwrap()
