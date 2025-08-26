@@ -4,7 +4,7 @@ mod nyt;
 use crate::game::guess;
 use crate::nyt::daily_manifest;
 use game::{WORD_LENGTH, Wordle};
-use rand::prelude::{IndexedRandom, Rng};
+use rand::prelude::IndexedRandom;
 use serde::Serialize;
 use std::fmt::Write;
 use std::fs::File;

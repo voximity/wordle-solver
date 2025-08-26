@@ -4,7 +4,7 @@ use std::array;
 use std::fmt::{Display, Formatter, Write};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-enum Letter {
+pub enum Letter {
     Incorrect,
     Partial,
     Correct,
@@ -96,7 +96,7 @@ impl<'a, const N: usize> Wordle<'a, N> {
 
             let prev_seen = guess[0..slot].iter().filter(|&&c| c == guess[slot]).count();
             let num_in_goal = goal.iter().filter(|&&c| c == guess[slot]).count();
-            if goal.contains(&guess[slot]) && prev_seen <= num_in_goal {
+            if goal.contains(&guess[slot]) && prev_seen < num_in_goal {
                 return Letter::Partial;
             }
 
@@ -174,3 +174,15 @@ pub fn guess<'a, const N: usize>(
 }
 
 pub const WORD_LENGTH: usize = 5;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use Letter::{Correct as C, Incorrect as X, Partial as P};
+
+    #[test]
+    fn enema() {
+        let feedback = Wordle::guess(b"enema", b"anger");
+        assert_eq!(feedback.0, [P, C, X, X, P]);
+    }
+}
